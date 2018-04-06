@@ -12,7 +12,13 @@ module ActiveRecord
         end
 
         def exec_query(sql, name = 'SQL', binds = [], prepare: false)
+          start_time = Time.now.utc
+          log("======= START EXEC QUERY =======") do
+          end
           sp_executesql(sql, name, binds, prepare: prepare)
+          end_time = Time.now.utc - start_time
+          log("======= END EXEC QUERY COMPLETED IN #{end_time} =======") do
+          end
         end
 
         def exec_insert(sql, name = nil, binds = [], pk = nil, _sequence_name = nil)
