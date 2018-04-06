@@ -12,13 +12,15 @@ module ActiveRecord
         end
 
         def exec_query(sql, name = 'SQL', binds = [], prepare: false)
+          uuid = SecureRandom.uuid
           start_time = Time.now.utc
-          log("======= START EXEC QUERY =======") do
+          log("======= START EXEC QUERY #{sql.inspect} -- #{uuid} -- =======") do
           end
-          sp_executesql(sql, name, binds, prepare: prepare)
+          result = sp_executesql(sql, name, binds, prepare: prepare)
           end_time = Time.now.utc - start_time
-          log("======= END EXEC QUERY COMPLETED IN #{end_time} =======") do
+          log("======= END EXEC QUERY -- #{uuid} -- COMPLETED IN #{end_time} =======") do
           end
+          result
         end
 
         def exec_insert(sql, name = nil, binds = [], pk = nil, _sequence_name = nil)
