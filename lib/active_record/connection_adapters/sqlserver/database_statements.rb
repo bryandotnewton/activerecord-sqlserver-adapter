@@ -240,12 +240,13 @@ module ActiveRecord
           start_time = Time.now.utc
           Rails.logger.debug("=== SP_EXECUTESQL #{sql.inspect} -- #{uuid} -- ===")
           options[:ar_result] = true if options[:fetch] != :rows
+          Rails.logger.debug "WITHOUT PREPARED STATEMENT?: #{without_prepared_statement?(binds)}"
           unless without_prepared_statement?(binds)
             types, params = sp_executesql_types_and_parameters(binds)
             sql = sp_executesql_sql(sql, types, params, name, uuid)
           end
           result = raw_select sql, uuid, name, binds, options
-          Rails.logger.debug("=== END EXEC QUERY -- #{uuid} -- COMPLETED IN #{Time.now.utc - start_time} ===")
+          Rails.logger.debug("=== END SP_EXECUTESQL -- #{uuid} -- COMPLETED IN #{Time.now.utc - start_time} ===")
           result
         end
 
@@ -348,16 +349,21 @@ module ActiveRecord
         # === SQLServer Specific (Selecting) ============================ #
 
         def raw_select(sql, uuid, name = 'SQL', binds = [], options = {})
-          log(sql, name, binds) { _raw_select(sql, uuid, options) }
+          result = nil
+          start_time = Time.now.utc
+          Rails.logger.debug("=== RAW_SELECT #{sql.inspect} -- #{uuid} -- ===")
+          log(sql, name, binds) { result = _raw_select(sql, uuid, options) }
+          Rails.logger.debug("=== END RAW_SELECT -- #{uuid} -- COMPLETED IN #{Time.now.utc - start_time} ===")
+          result
         end
 
         def _raw_select(sql, uuid, options = {})
           start_time = Time.now.utc
           Rails.logger.debug("=== _RAW_SELECT #{sql.inspect} -- #{uuid} -- ===")
           handle = raw_connection_run(sql, uuid)
-          t = handle_to_names_and_values(handle, uuid, options)
+          reusult = handle_to_names_and_values(handle, uuid, options)
           Rails.logger.debug("=== END _RAW_SELECT -- #{uuid} -- COMPLETED IN #{Time.now.utc - start_time} ===")
-          t
+          reusult
         ensure
           finish_statement_handle(handle)
         end
