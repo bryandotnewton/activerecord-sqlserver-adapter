@@ -230,9 +230,10 @@ module ActiveRecord
         def do_execute(sql, name = 'SQL')
           start_time = Time.now.utc
           Rails.logger.debug(" do_execute - Before executing sql query*****#{sql.inspect}*********************************")
-          t = log(sql, name) { raw_connection_do(sql) }
+          result = nil
+          log(sql, name) { result = raw_connection_do(sql) }
           Rails.logger.debug(" do_execute - After executing sql query*****#{sql.inspect} -- COMPLETED IN #{Time.now.utc - start_time} *********************************")
-          t
+          result
         end
 
         def sp_executesql(sql, name, binds, uuid=SecureRandom.uuid, options = {})
