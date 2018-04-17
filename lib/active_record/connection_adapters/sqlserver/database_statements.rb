@@ -241,7 +241,7 @@ module ActiveRecord
           options[:ar_result] = true if options[:fetch] != :rows
           unless without_prepared_statement?(binds)
             types, params = sp_executesql_types_and_parameters(binds)
-            sql = sp_executesql_sql(sql, types, params, name)
+            sql = sp_executesql_sql(sql, types, params, name, uuid)
           end
           result = raw_select sql, uuid, name, binds, options
           Rails.logger.debug("=== END EXEC QUERY -- #{uuid} -- COMPLETED IN #{Time.now.utc - start_time} ===")
@@ -277,7 +277,9 @@ module ActiveRecord
           end
         end
 
-        def sp_executesql_sql(sql, types, params, name)
+        def sp_executesql_sql(sql, types, params, name, uuid)
+          start_time = Time.now.utc
+          Rails.logger.debug("=== SP_EXECUTESQL_SQL #{sql.inspect} -- #{uuid} -- ===")
           if name == 'EXPLAIN'
             params.each.with_index do |param, index|
               substitute_at_finder = /(@#{index})(?=(?:[^']|'[^']*')*$)/ # Finds unquoted @n values.
@@ -289,6 +291,7 @@ module ActiveRecord
             sql = "EXEC sp_executesql #{quote(sql)}"
             sql << ", #{types}, #{params}" unless params.empty?
           end
+          Rails.logger.debug("=== END SP_EXECUTESQL_SQL -- #{uuid} -- COMPLETED IN #{Time.now.utc - start_time} ===")
           sql
         end
 
