@@ -235,7 +235,7 @@ module ActiveRecord
           t
         end
 
-        def sp_executesql(sql, name, binds, uuid, options = {})
+        def sp_executesql(sql, name, binds, uuid=SecureRandom.uuid, options = {})
           start_time = Time.now.utc
           Rails.logger.debug("=== SP_EXECUTESQL #{sql.inspect} -- #{uuid} -- ===")
           options[:ar_result] = true if options[:fetch] != :rows
