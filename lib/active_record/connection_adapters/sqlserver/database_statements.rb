@@ -361,11 +361,12 @@ module ActiveRecord
         def raw_connection_run(sql, uuid)
           start_time = Time.now.utc
           Rails.logger.debug("=== RAW CONNECTION RUN #{sql.inspect} -- #{uuid} -- ===")
-          case @connection_options[:mode]
+          result = case @connection_options[:mode]
           when :dblib
             @connection.execute(sql)
           end
           Rails.logger.debug("=== END RAW CONNECTION RUN -- #{uuid} -- COMPLETED IN #{Time.now.utc - start_time} ===")
+          result
         end
 
         def handle_more_results?(handle)
