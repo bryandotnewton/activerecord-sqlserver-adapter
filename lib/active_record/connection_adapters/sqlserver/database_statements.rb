@@ -15,7 +15,7 @@ module ActiveRecord
           uuid = SecureRandom.uuid
           start_time = Time.now.utc
           Rails.logger.debug("=== START EXEC QUERY #{sql.inspect} -- #{uuid} -- ===")
-          result = sp_executesql(sql, name, binds, prepare: prepare, uuid)
+          result = sp_executesql(sql, name, binds, uuid, prepare: prepare)
           end_time = Time.now.utc - start_time
           Rails.logger.debug("=== END EXEC QUERY -- #{uuid} -- COMPLETED IN #{end_time} ===")
           result
@@ -235,7 +235,7 @@ module ActiveRecord
           t
         end
 
-        def sp_executesql(sql, name, binds, options = {}, uuid)
+        def sp_executesql(sql, name, binds, uuid, options = {})
           start_time = Time.now.utc
           Rails.logger.debug("=== SP_EXECUTESQL #{sql.inspect} -- #{uuid} -- ===")
           options[:ar_result] = true if options[:fetch] != :rows
