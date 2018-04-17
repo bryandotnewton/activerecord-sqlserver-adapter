@@ -14,12 +14,10 @@ module ActiveRecord
         def exec_query(sql, name = 'SQL', binds = [], prepare: false)
           uuid = SecureRandom.uuid
           start_time = Time.now.utc
-          log("======= START EXEC QUERY #{sql.inspect} -- #{uuid} -- =======") do
-          end
-          result = sp_executesql(sql, name, binds, prepare: prepare)
+          Rails.logger.debug("=== START EXEC QUERY #{sql.inspect} -- #{uuid} -- ===")
+          result = sp_executesql(sql, name, binds, prepare: prepare, uuid)
           end_time = Time.now.utc - start_time
-          log("======= END EXEC QUERY -- #{uuid} -- COMPLETED IN #{end_time} =======") do
-          end
+          Rails.logger.debug("=== END EXEC QUERY -- #{uuid} -- COMPLETED IN #{end_time} ===")
           result
         end
 
@@ -230,22 +228,24 @@ module ActiveRecord
         # === SQLServer Specific (Executing) ============================ #
 
         def do_execute(sql, name = 'SQL')
-          log(" do_execute - Before executing sql query*****#{sql.inspect}***************#{Time.now.utc.strftime("%Y-%m-%dT%H:%M:%S.%LZ").inspect}*********************************") do
-          end
-
+          start_time = Time.now.utc
+          Rails.logger.debug(" do_execute - Before executing sql query*****#{sql.inspect}*********************************")
           t = log(sql, name) { raw_connection_do(sql) }
-          log(" do_execute - After executing sql query*****#{sql.inspect}***************#{Time.now.utc.strftime("%Y-%m-%dT%H:%M:%S.%LZ").inspect}*********************************") do
-          end
+          Rails.logger.debug(" do_execute - After executing sql query*****#{sql.inspect} -- COMPLETED IN #{Time.now.utc - start_time} *********************************")
           t
         end
 
-        def sp_executesql(sql, name, binds, options = {})
+        def sp_executesql(sql, name, binds, options = {}, uuid)
+          start_time = Time.now.utc
+          Rails.logger.debug("=== SP_EXECUTESQL #{sql.inspect} -- #{uuid} -- ===")
           options[:ar_result] = true if options[:fetch] != :rows
           unless without_prepared_statement?(binds)
             types, params = sp_executesql_types_and_parameters(binds)
             sql = sp_executesql_sql(sql, types, params, name)
           end
-          raw_select sql, name, binds, options
+          result = raw_select sql, name, binds, uuid, options
+          Rails.logger.debug("=== END EXEC QUERY -- #{uuid} -- COMPLETED IN #{Time.now.utc - start_time} ===")
+          result
         end
 
         def sp_executesql_types_and_parameters(binds)
@@ -343,27 +343,29 @@ module ActiveRecord
 
         # === SQLServer Specific (Selecting) ============================ #
 
-        def raw_select(sql, name = 'SQL', binds = [], options = {})
-          log(sql, name, binds) { _raw_select(sql, options) }
+        def raw_select(sql, name = 'SQL', binds = [], uuid, options = {})
+          log(sql, name, binds) { _raw_select(sql, options, uuid) }
         end
 
-        def _raw_select(sql, options = {})
-          log(" before executing sql query*****#{sql.inspect}***************#{Time.now.utc.strftime("%Y-%m-%dT%H:%M:%S.%LZ").inspect}*********************************") do
-          end
-          handle = raw_connection_run(sql)
+        def _raw_select(sql, options = {}, uuid)
+          start_time = Time.now.utc
+          Rails.logger.debug("=== _RAW_SELECT #{sql.inspect} -- #{uuid} -- ===")
+          handle = raw_connection_run(sql, uuid)
           t = handle_to_names_and_values(handle, options)
-          log(" after executing sql query**********#{sql.inspect}**********#{Time.now.utc.strftime("%Y-%m-%dT%H:%M:%S.%LZ").inspect}*********************************") do
-          end
+          Rails.logger.debug("=== END _RAW_SELECT -- #{uuid} -- COMPLETED IN #{Time.now.utc - start_time} ===")
           t
         ensure
           finish_statement_handle(handle)
         end
 
-        def raw_connection_run(sql)
+        def raw_connection_run(sql, uuid)
+          start_time = Time.now.utc
+          Rails.logger.debug("=== RAW CONNECTION RUN #{sql.inspect} -- #{uuid} -- ===")
           case @connection_options[:mode]
           when :dblib
             @connection.execute(sql)
           end
+          Rails.logger.debug("=== END RAW CONNECTION RUN -- #{uuid} -- COMPLETED IN #{Time.now.utc - start_time} ===")
         end
 
         def handle_more_results?(handle)
@@ -379,14 +381,18 @@ module ActiveRecord
           end
         end
 
-        def handle_to_names_and_values_dblib(handle, options = {})
+        def handle_to_names_and_values_dblib(handle, options = {}, uuid)
+          start_time = Time.now.utc
+          Rails.logger.debug("=== HANDLE TO NAMES AND VALUES DBLIB -- #{uuid} -- ===")
           query_options = {}.tap do |qo|
             qo[:timezone] = ActiveRecord::Base.default_timezone || :utc
             qo[:as] = (options[:ar_result] || options[:fetch] == :rows) ? :array : :hash
           end
           results = handle.each(query_options)
           columns = lowercase_schema_reflection ? handle.fields.map { |c| c.downcase } : handle.fields
-          options[:ar_result] ? ActiveRecord::Result.new(columns, results) : results
+          result = options[:ar_result] ? ActiveRecord::Result.new(columns, results) : results
+          Rails.logger.debug("=== END HANDLE TO NAMES AND VALUES DBLIB -- #{uuid} -- COMPLETED IN #{Time.now.utc - start_time} ===")
+          result
         end
 
         def finish_statement_handle(handle)
