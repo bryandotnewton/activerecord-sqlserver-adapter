@@ -243,7 +243,7 @@ module ActiveRecord
             types, params = sp_executesql_types_and_parameters(binds)
             sql = sp_executesql_sql(sql, types, params, name)
           end
-          result = raw_select sql, name, binds, uuid, options
+          result = raw_select sql, uuid, name, binds, options
           Rails.logger.debug("=== END EXEC QUERY -- #{uuid} -- COMPLETED IN #{Time.now.utc - start_time} ===")
           result
         end
@@ -343,15 +343,15 @@ module ActiveRecord
 
         # === SQLServer Specific (Selecting) ============================ #
 
-        def raw_select(sql, name = 'SQL', binds = [], uuid, options = {})
-          log(sql, name, binds) { _raw_select(sql, options, uuid) }
+        def raw_select(sql, uuid, name = 'SQL', binds = [], options = {})
+          log(sql, name, binds) { _raw_select(sql, uuid, options) }
         end
 
-        def _raw_select(sql, options = {}, uuid)
+        def _raw_select(sql, uuid, options = {})
           start_time = Time.now.utc
           Rails.logger.debug("=== _RAW_SELECT #{sql.inspect} -- #{uuid} -- ===")
           handle = raw_connection_run(sql, uuid)
-          t = handle_to_names_and_values(handle, options)
+          t = handle_to_names_and_values(handle, uuid, options)
           Rails.logger.debug("=== END _RAW_SELECT -- #{uuid} -- COMPLETED IN #{Time.now.utc - start_time} ===")
           t
         ensure
@@ -374,14 +374,14 @@ module ActiveRecord
           end
         end
 
-        def handle_to_names_and_values(handle, options = {})
+        def handle_to_names_and_values(handle, uuid, options = {})
           case @connection_options[:mode]
           when :dblib
-            handle_to_names_and_values_dblib(handle, options)
+            handle_to_names_and_values_dblib(handle, uuid, options)
           end
         end
 
-        def handle_to_names_and_values_dblib(handle, options = {}, uuid)
+        def handle_to_names_and_values_dblib(handle, uuid, options = {})
           start_time = Time.now.utc
           Rails.logger.debug("=== HANDLE TO NAMES AND VALUES DBLIB -- #{uuid} -- ===")
           query_options = {}.tap do |qo|
