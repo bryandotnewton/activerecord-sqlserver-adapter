@@ -104,17 +104,17 @@ module ActiveRecord
                  end.join(', ')
           sql = "EXEC #{proc_name} #{vars}".strip
           name = 'Execute Procedure'
-          log(sql, name) do
-            case @connection_options[:mode]
-            when :dblib
-              result = @connection.execute(sql)
-              options = { as: :hash, cache_rows: true, timezone: ActiveRecord::Base.default_timezone || :utc }
-              result.each(options) do |row|
-                r = row.with_indifferent_access
-                yield(r) if block_given?
-              end
-              result.each.map { |row| row.is_a?(Hash) ? row.with_indifferent_access : row }
+          # log(sql, name) do
+          case @connection_options[:mode]
+          when :dblib
+            result = @connection.execute(sql)
+            options = { as: :hash, cache_rows: true, timezone: ActiveRecord::Base.default_timezone || :utc }
+            result.each(options) do |row|
+              r = row.with_indifferent_access
+              yield(r) if block_given?
             end
+            result.each.map { |row| row.is_a?(Hash) ? row.with_indifferent_access : row }
+            # end
           end
         end
 
@@ -231,8 +231,9 @@ module ActiveRecord
           start_time = Time.now.utc
           Rails.logger.debug(" do_execute - Before executing sql query*****#{sql.inspect}*********************************")
           result = nil
-          log(sql, name) { result = raw_connection_do(sql) }
-          Rails.logger.debug(" do_execute - After executing sql query*****#{sql.inspect} -- COMPLETED IN #{Time.now.utc - start_time} *********************************")
+          # log(sql, name) { result = raw_connection_do(sql) }
+          result = raw_connection_do(sql)
+          Rails.logger.debug(" do_execute - After executing sql query*****#{sql.inspect} *********************************")
           result
         end
 
@@ -246,7 +247,7 @@ module ActiveRecord
             sql = sp_executesql_sql(sql, types, params, name, uuid)
           end
           result = raw_select sql, uuid, name, binds, options
-          Rails.logger.debug("=== END SP_EXECUTESQL -- #{uuid} -- COMPLETED IN #{Time.now.utc - start_time} ===")
+          Rails.logger.debug("=== END SP_EXECUTESQL -- #{uuid} ===")
           result
         end
 
@@ -293,7 +294,7 @@ module ActiveRecord
             sql = "EXEC sp_executesql #{quote(sql)}"
             sql << ", #{types}, #{params}" unless params.empty?
           end
-          Rails.logger.debug("=== END SP_EXECUTESQL_SQL -- #{uuid} -- COMPLETED IN #{Time.now.utc - start_time} ===")
+          Rails.logger.debug("=== END SP_EXECUTESQL_SQL -- #{uuid} ===")
           sql
         end
 
@@ -352,8 +353,9 @@ module ActiveRecord
           result = nil
           start_time = Time.now.utc
           Rails.logger.debug("=== RAW_SELECT #{sql.inspect} -- #{uuid} -- ===")
-          log(sql, name, binds) { result = _raw_select(sql, uuid, options) }
-          Rails.logger.debug("=== END RAW_SELECT -- #{uuid} -- COMPLETED IN #{Time.now.utc - start_time} ===")
+          # log(sql, name, binds) { result = _raw_select(sql, uuid, options) }
+          result = _raw_select(sql, uuid, options)
+          Rails.logger.debug("=== END RAW_SELECT -- #{uuid} === RAN IN #{Time.now.utc - start_time}")
           result
         end
 
@@ -362,7 +364,7 @@ module ActiveRecord
           Rails.logger.debug("=== _RAW_SELECT #{sql.inspect} -- #{uuid} -- ===")
           handle = raw_connection_run(sql, uuid)
           reusult = handle_to_names_and_values(handle, uuid, options)
-          Rails.logger.debug("=== END _RAW_SELECT -- #{uuid} -- COMPLETED IN #{Time.now.utc - start_time} ===")
+          Rails.logger.debug("=== END _RAW_SELECT -- #{uuid} ===")
           reusult
         ensure
           finish_statement_handle(handle)
@@ -375,7 +377,7 @@ module ActiveRecord
           when :dblib
             @connection.execute(sql)
           end
-          Rails.logger.debug("=== END RAW CONNECTION RUN -- #{uuid} -- COMPLETED IN #{Time.now.utc - start_time} ===")
+          Rails.logger.debug("=== END RAW CONNECTION RUN -- #{uuid} ===")
           result
         end
 
@@ -402,7 +404,7 @@ module ActiveRecord
           results = handle.each(query_options)
           columns = lowercase_schema_reflection ? handle.fields.map { |c| c.downcase } : handle.fields
           result = options[:ar_result] ? ActiveRecord::Result.new(columns, results) : results
-          Rails.logger.debug("=== END HANDLE TO NAMES AND VALUES DBLIB -- #{uuid} -- COMPLETED IN #{Time.now.utc - start_time} ===")
+          Rails.logger.debug("=== END HANDLE TO NAMES AND VALUES DBLIB -- #{uuid} ===")
           result
         end
 
